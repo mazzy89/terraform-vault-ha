@@ -18,6 +18,7 @@ A list of features (some provider-specific)
 - Vault Auto-Unseal with AWS KMS (only on AWS)
 - Store recovery keys in encrypted format in S3 (available in several providers)
 - Configure Vault via bank-vaults
+- WIP: Access to Vault cluster via [Teleport](https://github.com/gravitational/teleport)
 
 ## Architecture
 
