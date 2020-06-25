@@ -1,0 +1,50 @@
+[Unit]
+Description="HashiCorp Vault - A tool for managing secrets"
+Documentation=https://www.vaultproject.io/docs/
+
+Requires=etc-vault.mount coreos-metadata.service docker.service
+After=etc-vault.mount coreos-metadata.service docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Restart=on-failure
+# Restart the unit after 1 sec
+RestartSec=5
+# If in a interval of 300s the unit restarts more than 10 times
+# mark the unit failed
+StartLimitInterval=60
+StartLimitIntervalSec=60
+StartLimitBurst=3
+## If within 10s the service is not up, mark the unit as failed
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+
+Environment="IMAGE=vault:${vault_version}"
+Environment="NAME=vault"
+EnvironmentFile=/run/metadata/flatcar
+
+ExecStartPre=/usr/bin/docker pull $IMAGE
+ExecStartPre=-/usr/bin/docker stop -t 10 $NAME
+ExecStartPre=-/usr/bin/docker rm -f $NAME
+ExecStart=/usr/bin/docker run --rm \
+  --net=host \
+  -e VAULT_API_ADDR=https://$${COREOS_EC2_IPV4_LOCAL}:8200 \
+  -e VAULT_CLUSTER_ADDR=https://$${COREOS_EC2_IPV4_LOCAL}:8201 \
+  ## Disable set cap because anyway Flatcar does not have swap partition
+  ##
+  -e SKIP_SETCAP=true \
+  -v /etc/vault/data:/etc/vault/data \
+  -v /etc/vault/config:/etc/vault/config \
+  -v /etc/vault/audit:/etc/vault/audit \
+  -v /etc/ssl/vault:/etc/ssl/vault \
+  --user ${vault_uid} \
+  --name $NAME \
+  $IMAGE server -config /etc/vault/config/config.json
+
+ExecStop=-/usr/bin/docker stop -t 10 $NAME
+ExecStopPost=-/usr/bin/docker rm -f $NAME
+
+[Install]
+WantedBy=multi-user.target

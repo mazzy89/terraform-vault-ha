@@ -1,0 +1,31 @@
+[Unit]
+Description=Node Exporter
+Documentation=https://github.com/prometheus/node_exporter
+
+Requires=docker.service
+After=docker.service
+
+[Service]
+Restart=on-failure
+# Restart the unit after 1 sec
+RestartSec=1
+# If in a interval of 300s the unit restarts more than 10 times
+# mark the unit failed
+StartLimitInterval=300s
+StartLimitBurst=10
+## If within 10s the service is not up, mark the unit as failed
+TimeoutStartSec=10
+
+Environment="IMAGE=quay.io/prometheus/node-exporter:${node_exporter_version}"
+Environment="OPTIONS=--collector.textfile.directory /var/lib/node_exporter/textfile_collector"
+Environment="NAME=node_exporter"
+
+ExecStartPre=/usr/bin/docker pull $IMAGE
+ExecStartPre=-/usr/bin/docker stop -t 10 $NAME
+ExecStartPre=-/usr/bin/docker rm -f $NAME
+ExecStart=/usr/bin/docker run --net=host --pid=host -v "/:/host:ro,rslave" --name $NAME $IMAGE --path.rootfs=/host $OPTIONS
+ExecStop=-/usr/bin/docker stop -t 10 $NAME
+ExecStopPost=-/usr/bin/docker rm -f $NAME
+
+[Install]
+WantedBy=multi-user.target

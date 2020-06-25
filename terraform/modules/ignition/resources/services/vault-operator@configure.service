@@ -1,0 +1,46 @@
+[Unit]
+Description="The bank-vaults CLI tool is to help automate the setup and management of HashiCorp Vault."
+Documentation=https://github.com/banzaicloud/bank-vaults/blob/master/docs/cli-tool/README.md
+
+Requires=vault.service
+After=vault.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Restart=on-failure
+# Restart the unit after 1 sec
+RestartSec=5
+# If in a interval of 300s the unit restarts more than 10 times
+# mark the unit failed
+StartLimitInterval=60
+StartLimitIntervalSec=60
+StartLimitBurst=3
+## If within 10s the service is not up, mark the unit as failed
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+Environment="IMAGE=banzaicloud/bank-vaults:1.2.0"
+Environment="NAME=bank-vaults-configure"
+Environment="OPTIONS=--vault-config-file ${vault_mount}${vault_config_file} --mode aws-kms-s3 --aws-kms-region ${aws_region} --aws-kms-key-id ${aws_kms} --aws-s3-bucket ${aws_s3_bucket} --aws-s3-prefix ${aws_s3_prefix} --aws-s3-region ${aws_region}"
+
+ExecStartPre=/usr/bin/docker pull $IMAGE
+ExecStartPre=-/usr/bin/docker stop -t 10 $NAME
+ExecStartPre=-/usr/bin/docker rm -f $NAME
+ExecStart=/usr/bin/docker run --rm \
+  --net=host \
+  -e VAULT_ADDR=https://127.0.0.1:8200 \
+  -e VAULT_RAFT_CACERT=/etc/ssl/vault/vault.crt.pem \
+  -e VAULT_SKIP_VERIFY=true \
+  -e GIN_MODE=release \
+  -v /etc/vault/config:/etc/vault/config \
+  -v /etc/ssl/vault:/etc/ssl/vault \
+  --user ${vault_uid} \
+  --name $NAME \
+  $IMAGE configure $OPTIONS
+
+ExecStop=-/usr/bin/docker stop -t 10 $NAME
+ExecStopPost=-/usr/bin/docker rm -f $NAME
+
+[Install]
+WantedBy=multi-user.target

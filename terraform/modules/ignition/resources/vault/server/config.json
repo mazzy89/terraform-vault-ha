@@ -1,0 +1,30 @@
+{
+  "disable_mlock": true,
+  "listener": {
+    "tcp": {
+      "address": "0.0.0.0:8200",
+      "cluster_address": "0.0.0.0:8201",
+      "tls_cert_file": "/etc/ssl/vault/vault.crt.pem",
+      "tls_key_file": "/etc/ssl/vault/vault.key.pem"
+    }
+  },
+  "seal": {
+    "awskms": {
+      "kms_key_id": "${kms_key}",
+      "region": "${aws_region}"
+    }
+  },
+  "storage": {
+    "raft": {
+      "node_id": "${vault_node_id}",
+      "path": "${vault_storage_path}"
+    }
+  },
+  "telemetry": {
+    "disable_hostname": true,
+    "prometheus_retention_time": "30s"
+  },
+  "ui": true,
+  "log_level": "info",
+  "log_format": "json"
+}
